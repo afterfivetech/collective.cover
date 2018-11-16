@@ -322,15 +322,12 @@ var coveractions = {
       hoverClass: 'content-drop-hover ui-state-hover',
       drop: dropped
     });
-<<<<<<< HEAD
-=======
 
     if (isPlone5 === false && $('.template-compose').length > 0) {
       $(windowId + ' .tab-pane').css('border', 0);
       $(windowId + ' legend').remove();
       $(windowId + ' ul.formTabs').tabs(windowId + ' .tab-pane');
     }
->>>>>>> upstream/master
   }
 
   $(function() {
