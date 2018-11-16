@@ -98,5 +98,5 @@ class SearchableRichTextTile(object):
             context=context,
             encoding='utf-8' if isinstance(value, six.text_type) else value.encoding)
 
-        searchable_text = six.text_type(data.getData(), 'utf-8')
+        searchable_text = six.text_type(data.getData(), 'utf-8') if type(data.getData()) != unicode else data.getData()
         return searchable_text.strip()  # remove leading and trailing spaces
