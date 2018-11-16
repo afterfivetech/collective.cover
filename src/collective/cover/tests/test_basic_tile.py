@@ -4,9 +4,8 @@ from collective.cover.tests.base import TestTileMixin
 from collective.cover.tests.utils import today
 from collective.cover.tiles.basic import BasicTile
 from collective.cover.tiles.basic import IBasicTile
-from collective.cover.tiles.configuration import ITilesConfigurationScreen
-from collective.cover.tiles.permissions import ITilesPermissions
 from DateTime import DateTime
+from lxml import etree  # nosec
 from mock import Mock
 from plone import api
 from plone.app.testing import logout
@@ -17,13 +16,13 @@ from plone.registry.interfaces import IRegistry
 from plone.tiles.interfaces import ITileDataManager
 from zope.annotation.interfaces import IAnnotations
 from zope.annotation.interfaces import IAttributeAnnotatable
-from zope.component import getMultiAdapter
 from zope.component import provideUtility
 from zope.component import queryUtility
 from zope.component.globalregistry import provideHandler
 from zope.globalrequest import setRequest
 from zope.interface import alsoProvides
 
+import six
 import unittest
 
 
@@ -100,7 +99,7 @@ class BasicTileTestCase(TestTileMixin, unittest.TestCase):
         self.assertEqual('This news item was created for testing purposes',
                          self.tile.data['description'])
 
-    def test_populate_with_object_unicode(self):
+    def test_populate_with_object_text(self):
         """We must store unicode always on schema.TextLine and schema.Text
         fields to avoid UnicodeDecodeError.
         """
@@ -113,8 +112,8 @@ class BasicTileTestCase(TestTileMixin, unittest.TestCase):
         self.tile.populate_with_object(obj)
         self.assertEqual(title, self.tile.data['title'])
         self.assertEqual(description, self.tile.data['description'])
-        self.assertIsInstance(self.tile.data.get('title'), unicode)
-        self.assertIsInstance(self.tile.data.get('description'), unicode)
+        self.assertIsInstance(self.tile.data.get('title'), six.text_type)
+        self.assertIsInstance(self.tile.data.get('description'), six.text_type)
 
     def test_populate_with_object_string(self):
         """This test complements test_populate_with_object_unicode
@@ -128,13 +127,9 @@ class BasicTileTestCase(TestTileMixin, unittest.TestCase):
         obj.reindexObject()
         self.tile.populate_with_object(obj)
         self.assertEqual(
-            unicode(title, 'utf-8'),
-            self.tile.data.get('title')
-        )
+            six.text_type(title, 'utf-8'), self.tile.data.get('title'))
         self.assertEqual(
-            unicode(description, 'utf-8'),
-            self.tile.data.get('description')
-        )
+            six.text_type(description, 'utf-8'), self.tile.data.get('description'))
 
     def test_render_empty(self):
         msg = 'Please drag&amp;drop some content here to populate the tile.'
@@ -180,6 +175,21 @@ class BasicTileTestCase(TestTileMixin, unittest.TestCase):
         self.assertIn(
             '<p>This news item was created for testing purposes</p>', rendered)
 
+        html = etree.HTML(self.tile())
+        img = html.find('*//img')
+        self.assertIsNotNone(img)
+        self.assertIn('alt', img.attrib)
+        self.assertEqual(img.attrib['alt'], obj.Description())
+
+        # set alternate text
+        alt_text = u'Murciélago hindú'
+        self.tile.data['alt_text'] = alt_text
+        html = etree.HTML(self.tile())
+        img = html.find('*//img')
+        self.assertIsNotNone(img)
+        self.assertIn('alt', img.attrib)
+        self.assertEqual(img.attrib['alt'], alt_text)
+
         # the localized time must be there
         date = api.portal.get_localized_time(obj.Date(), long_format=True)
         self.assertIn(date, rendered)
@@ -191,29 +201,6 @@ class BasicTileTestCase(TestTileMixin, unittest.TestCase):
         # the image is there and the alt attribute is set
         self.assertIn('<img ', rendered)
         self.assertIn('alt="This news item was created for testing purposes"', rendered)
-
-    def test_delete_tile_persistent_data(self):
-        permissions = getMultiAdapter(
-            (self.tile.context, self.request, self.tile), ITilesPermissions)
-        permissions.set_allowed_edit('masters_of_the_universe')
-        annotations = IAnnotations(self.tile.context)
-        self.assertIn('plone.tiles.permission.test', annotations)
-
-        configuration = getMultiAdapter(
-            (self.tile.context, self.request, self.tile),
-            ITilesConfigurationScreen)
-        configuration.set_configuration({
-            'title': {'order': u'0', 'visibility': u'on'},
-            'description': {'order': u'1', 'visibility': u'off'},
-        })
-        self.assertIn('plone.tiles.configuration.test', annotations)
-
-        # Call the delete method
-        self.tile.delete()
-
-        # Now we should not see the stored data anymore
-        self.assertNotIn('plone.tiles.permission.test', annotations)
-        self.assertNotIn('plone.tiles.configuration.test', annotations)
 
     def test_populate_with_file(self):
         obj = self.portal['my-file']
@@ -321,3 +308,40 @@ class BasicTileTestCase(TestTileMixin, unittest.TestCase):
         self.tile.data['title'] = 'custom title'
         self.tile.data['description'] = 'custom description'
         self.assertEqual(searchable.SearchableText(), 'custom title custom description')
+
+    def test_getURL(self):
+        obj = self.portal['my-news-item']
+        self.tile.populate_with_object(obj)
+        expected = 'http://nohost/plone/my-news-item'
+        self.assertEqual(self.tile.getURL(), expected)
+
+    @unittest.expectedFailure
+    def test_getURL_view_action(self):
+        # on some content types we should add '/view' to the URL
+        obj = self.portal['my-image']
+        self.tile.populate_with_object(obj)
+        expected = 'http://nohost/plone/my-image/view'
+        self.assertEqual(self.tile.getURL(), expected)
+
+    def test_getURL_render(self):
+        # the URL must be rendered normally
+        obj = self.portal['my-news-item']
+        self.tile.populate_with_object(obj)
+        html = etree.HTML(self.tile())
+        a = html.find('*//a')
+        expected = 'http://nohost/plone/my-news-item'
+        self.assertEqual(a.attrib['href'], expected)
+
+    def test_getURL_render_edited(self):
+        # the alternate URL must be rendered
+        obj = self.portal['my-news-item']
+        self.tile.populate_with_object(obj)
+        remote_url = 'http://example.org/'
+        data_mgr = ITileDataManager(self.tile)
+        data = data_mgr.get()
+        data['remote_url'] = remote_url
+        data_mgr.set(data)
+        tile = self.get_tile
+        html = etree.HTML(tile())
+        a = html.find('*//a')
+        self.assertEqual(a.attrib['href'], remote_url)

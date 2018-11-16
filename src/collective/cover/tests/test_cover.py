@@ -3,6 +3,7 @@ from AccessControl import Unauthorized
 from collective.cover.config import DEFAULT_GRID_SYSTEM
 from collective.cover.controlpanel import ICoverSettings
 from collective.cover.interfaces import ICover
+from collective.cover.setuphandlers import HAS_RELATIONFIELD
 from collective.cover.testing import INTEGRATION_TESTING
 from plone import api
 from plone.app.dexterity.behaviors.exclfromnav import IExcludeFromNavigation
@@ -55,6 +56,11 @@ class CoverIntegrationTestCase(unittest.TestCase):
 
     def test_locking_behavior(self):
         self.assertTrue(ILocking.providedBy(self.cover))
+
+    @unittest.skipUnless(HAS_RELATIONFIELD, 'Needs plone.app.relationfield')
+    def test_relateditems_behavior(self):
+        from plone.app.relationfield.behavior import IRelatedItems
+        self.assertTrue(IRelatedItems.providedBy(self.cover))
 
     def test_cover_selectable_as_folder_default_view(self):
         self.folder.setDefaultPage('c1')
@@ -156,7 +162,5 @@ class CoverIntegrationTestCase(unittest.TestCase):
         # indexer should contain id, title, description and text in tiles
         self.assertEqual(
             searchableText(self.cover)(),
-            u'c1 Lorem ipsum Neque porro 01234 56789'
+            u'c1 Lorem ipsum Neque porro 01234 56789',
         )
-
-    # TODO: add test for plone.app.relationfield.behavior.IRelatedItems

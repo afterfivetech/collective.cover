@@ -38,6 +38,7 @@ from zope.schema import getFieldsInOrder
 
 import logging
 import Missing
+import six
 
 
 logger = logging.getLogger(PROJECTNAME)
@@ -49,7 +50,7 @@ class IPersistentCoverTile(model.Schema):
     """
 
     css_class = Choice(
-        title=_(u'CSS Class'),
+        title=_(u'CSS Classes'),
         vocabulary='collective.cover.TileStyles',
         required=True,
         default=u'tile-default',
@@ -264,7 +265,7 @@ class PersistentCoverTile(ESIPersistentTile):
             # By default all fields are included.
             return True
 
-        if isinstance(field_conf, basestring):
+        if isinstance(field_conf, six.string_types):
             # css_class simply has a simple string, not a dictionary,
             # so there is nothing left to check.
             return True
@@ -308,7 +309,7 @@ class PersistentCoverTile(ESIPersistentTile):
         pm = api.portal.get_tool('portal_membership')
 
         if user:
-            if isinstance(user, basestring):
+            if isinstance(user, six.string_types):
                 user = pm.getMemberById(user)
         else:
             user = pm.getAuthenticatedMember()
@@ -434,7 +435,7 @@ class PersistentCoverTilePurgePaths(object):
         portal_url = api.portal.get().portal_url()
         prefix = context.url.replace(portal_url, '', 1)
         yield prefix
-        for k, v in context.data.items():
+        for v in context.data.values():
             if INamedImage.providedBy(v):
                 yield '{0}/@@images/image'.format(prefix)
                 scales = parent.unrestrictedTraverse(

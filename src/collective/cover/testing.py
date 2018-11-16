@@ -8,7 +8,7 @@ plone.app.contenttypes:
     installed under Plone 4.3, if requested; installed under Plone 5
 
 Products.PloneFormGen
-    installed under Plone 4 only
+    installed under Plone 4 only (now deprecated)
 """
 from collective.cover.config import IS_PLONE_5
 from collective.cover.tests.utils import create_standard_content_for_tests
@@ -34,12 +34,15 @@ else:
     # this environment variable is set in .travis.yml test matrix
     DEXTERITY_ONLY = os.environ.get('DEXTERITY_ONLY') is not None
 
+
+# XXX: PFG tile is deprecated and will be removed in collective.cover 3
 try:
     pkg_resources.get_distribution('Products.PloneFormGen')
 except pkg_resources.DistributionNotFound:
     HAS_PFG = False
 else:
-    HAS_PFG = True
+    # XXX: even if product is present, PFG tile must not be available
+    HAS_PFG = True if not IS_PLONE_5 else False
 
 ALL_CONTENT_TYPES = [
     'Collection',
@@ -93,26 +96,35 @@ def generate_jpeg(width, height):
     maxIt = 25  # max iterations allowed
     # image size
     image = Image.new('RGB', (width, height))
-    c = complex(random.random() * 2.0 - 1.0, random.random() - 0.5)
+    c = complex(random.random() * 2.0 - 1.0, random.random() - 0.5)  # nosec
 
     for y in range(height):
-        zy = y * (yb - ya) / (height - 1) + ya
+        zy = y * (yb - ya) // (height - 1) + ya
         for x in range(width):
-            zx = x * (xb - xa) / (width - 1) + xa
+            zx = x * (xb - xa) // (width - 1) + xa
             z = complex(zx, zy)
             for i in range(maxIt):
                 if abs(z) > 2.0:
                     break
                 z = z * z + c
-            # FIXME: https://github.com/gforcada/flake8-pep3101/issues/16
-            r = i % 4 * 64  # noqa: S001
-            g = i % 8 * 32  # noqa: S001
-            b = i % 16 * 16  # noqa: S001
+            r = i % 4 * 64
+            g = i % 8 * 32
+            b = i % 16 * 16
             image.putpixel((x, y), b * 65536 + g * 256 + r)
 
     output = StringIO()
     image.save(output, format='PNG')
     return output
+
+
+# FIXME: workaround for https://github.com/plone/plone.app.testing/issues/39
+#        Products.TinyMCE is used only in Plone 4
+if not IS_PLONE_5:
+    autoform = ('plone.autoform', {'loadZCML': True})
+    tinymce = ('Products.TinyMCE', {'loadZCML': True})
+    products = list(PLONE_FIXTURE.products)
+    products.insert(products.index(tinymce), autoform)
+    PLONE_FIXTURE.products = tuple(products)
 
 
 class Fixture(PloneSandboxLayer):
@@ -133,10 +145,10 @@ class Fixture(PloneSandboxLayer):
                 self.loadZCML(package=plone.app.contenttypes)
                 z2.installProduct(app, 'Products.DateRecurringIndex')
 
-            if HAS_PFG:
-                import Products.PloneFormGen
-                self.loadZCML(package=Products.PloneFormGen)
-                z2.installProduct(app, 'Products.PloneFormGen')
+        if HAS_PFG:
+            import Products.PloneFormGen
+            self.loadZCML(package=Products.PloneFormGen)
+            z2.installProduct(app, 'Products.PloneFormGen')
 
         import collective.cover
         self.loadZCML(package=collective.cover)
@@ -155,8 +167,8 @@ class Fixture(PloneSandboxLayer):
             if DEXTERITY_ONLY:
                 self.applyProfile(portal, 'plone.app.contenttypes:default')
 
-            if HAS_PFG:
-                self.applyProfile(portal, 'Products.PloneFormGen:default')
+        if HAS_PFG:
+            self.applyProfile(portal, 'Products.PloneFormGen:default')
 
         self.applyProfile(portal, 'collective.cover:default')
         self.applyProfile(portal, 'collective.cover:testfixture')

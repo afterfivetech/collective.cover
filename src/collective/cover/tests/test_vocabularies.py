@@ -69,13 +69,17 @@ class VocabulariesTestCase(unittest.TestCase):
             'collective.cover.embed',
             'collective.cover.file',
             'collective.cover.list',
-            'collective.cover.pfg',  # FIXME: https://github.com/collective/collective.cover/issues/194
             'collective.cover.richtext',
         ]
 
         # FIXME: https://github.com/collective/collective.cover/issues/633
         if IS_PLONE_5:
             expected.remove('collective.cover.calendar')
+
+        # XXX: PFG tile is deprecated and will be removed in collective.cover 3
+        from collective.cover.testing import HAS_PFG
+        if HAS_PFG and 'collective.cover.pfg' not in expected:
+            expected.append('collective.cover.pfg')
 
         self.assertEqual(len(tiles), len(expected))
         for i in expected:
@@ -97,7 +101,7 @@ class VocabulariesTestCase(unittest.TestCase):
         # and the default u"tile-default" style is always first
         styles = vocabulary(self.portal)
         self.assertEqual(len(styles), 4)
-        self.assertEqual(styles.by_value.keys()[0], u'tile-default')
+        self.assertEqual(list(styles.by_value.keys())[0], u'tile-default')
         # let's try to put some other values on it
         registry = getUtility(IRegistry)
         settings = registry.forInterface(ICoverSettings)
@@ -111,13 +115,13 @@ class VocabulariesTestCase(unittest.TestCase):
 
         # although default style is not set, vocabulary inserts it first
         self.assertEqual(len(styles), 4)
-        self.assertEqual(styles.by_value.keys()[0], u'tile-default')
+        self.assertEqual(list(styles.by_value.keys())[0], u'tile-default')
         # adding a couple of not well formatted items result in no option
         # (except for the default one)
         settings.styles = set(['not well formatted'])
         styles = vocabulary(self.portal)
         self.assertEqual(len(styles), 1)
-        self.assertEqual(styles.by_value.keys()[0], u'tile-default')
+        self.assertEqual(list(styles.by_value.keys())[0], u'tile-default')
 
     def test_grid_systems(self):
         name = 'collective.cover.GridSystems'
@@ -133,3 +137,13 @@ class VocabulariesTestCase(unittest.TestCase):
         self.assertEqual(grids.getTerm('bootstrap3').title, u'Bootstrap 3')
         self.assertEqual(grids.getTerm('bootstrap2').title, u'Bootstrap 2')
         self.assertEqual(grids.getTerm('deco16_grid').title, u'Deco (16 columns)')
+
+    def test_image_scales(self):
+        from collective.cover.browser.cover import Helper
+        vocabulary = Helper.get_image_scales()
+
+        self.assertGreater(len(vocabulary), 0)
+        # test against some expected values
+        self.assertIn(u'imagescale_mini', vocabulary)
+        self.assertIn(u'imagescale_preview', vocabulary)
+        self.assertIn(u'imagescale_large', vocabulary)

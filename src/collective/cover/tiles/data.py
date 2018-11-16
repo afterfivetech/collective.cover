@@ -28,9 +28,14 @@ class PersistentCoverTileDataManager(PersistentTileDataManager):
         conf = self.tile.get_tile_configuration()
         if self.tileType:
             fields = getFields(self.tileType.schema)
-
             for field_name, field_conf in conf.items():
-                if 'order' in field_conf and field_conf['order']:
+                if field_name not in fields:
+                    continue  # tile schema has changed
+
+                if not isinstance(field_conf, dict):
+                    continue  # field is not ordered
+
+                if field_conf.get('order'):
                     fields[field_name].order = int(field_conf['order'])
 
     def set(self, data):

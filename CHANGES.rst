@@ -3,8 +3,155 @@ Changelog
 
 There's a frood who really knows where his towel is.
 
-1.6b2 (unreleased)
+2.1b3 (unreleased)
 ^^^^^^^^^^^^^^^^^^
+
+- Nothing changed yet.
+
+
+2.1b2 (2018-10-04)
+^^^^^^^^^^^^^^^^^^
+
+- Fix behavior of ``remote_url`` field on Basic tiles as populating them from an alternate URL could result on incorrect links stored.
+  Remove upgrade step from profile version 22 used to update the field;
+  we include a new upgrade step that lists suspicious tiles to help fix any issue by hand (fixes `#839 <https://github.com/collective/collective.cover/issues/839>`_).
+  [hvelarde]
+
+
+2.1b1 (2018-09-28)
+^^^^^^^^^^^^^^^^^^
+
+- Fix ``remote_url`` field definition in Banner tile and hide ``a`` tag if no URL is defined.
+  [hvelarde]
+
+- Links on Basic tiles are now editable (fixes `#397 <https://github.com/collective/collective.cover/issues/397>`_).
+  [hvelarde]
+
+- Avoid ``TypeError`` when a style used on a tile was removed (fixes `#827 <https://github.com/collective/collective.cover/issues/827>`_).
+  [rodfersou]
+
+- Avoid ``KeyError`` when tile schema has changed (refs. `brasil.gov.portal#524 <https://github.com/plonegovbr/brasil.gov.portal/issues/524>`_).
+  [hvelarde]
+
+- Fix package uninstall.
+  [hvelarde]
+
+
+2.0b1 (2018-08-24)
+^^^^^^^^^^^^^^^^^^
+
+.. warning::
+    The PFG tile is now deprecated an will be removed in collective.cover 3.
+    This version removes the hard dependency on ``plone.app.relationfield``;
+    if you're ugrading from a previous version of ``collective.cover`` you must add the extra ``[relations]``.
+    Upgrading from versions below 1.2b1 is no longer supported.
+    You must upgrade at least to version 1.2b1 before upgrading to this release.
+
+- Update package dependencies.
+  [hvelarde]
+
+- Deprecate PFG tile; it will remain available in Plone 4, but not in Plone 5.
+  [hvelarde]
+
+- Remove hard dependency on ``plone.app.relationfield``;
+  if you're ugrading from a previous version of ``collective.cover`` you must add the extra ``[relations]`` (closes `#684 <https://github.com/collective/collective.cover/issues/684>`_).
+  [hvelarde]
+
+- Remove predefined layouts as they were created using Deco grid system and they are broken in Plone 5 (closes `#652 <https://github.com/collective/collective.cover/issues/652>`_).
+  You can still create your own layouts using your favorite grid system as usually.
+  [rodfersou]
+
+- Remove upgrade steps for old, unsupported releases.
+  [hvelarde]
+
+- Remove deprecated adapters ``CollectionUIDsProvider``, ``FolderUIDsProvider`` and ``GenericUIDsProvider``.
+  [hvelarde]
+
+- Fix retrieval of available image scales in tile layout configuration for Plone 5 (fixes `#781 <https://github.com/collective/collective.cover/issues/781>`_).
+  [rodfersou]
+
+- Fix edit list element in compose tab on Plone 5 (fixes `#770 <https://github.com/collective/collective.cover/issues/770>`_).
+  [rodfersou]
+
+- Fix display of tabs in content chooser for Plone 5.
+  [cdw9, rodfersou]
+
+
+1.7b3 (2018-07-09)
+^^^^^^^^^^^^^^^^^^
+
+- Review multiple class selection when there are many classes (closes `#785 <https://github.com/collective/collective.cover/issues/785>`_).
+  [rodfersou]
+
+- Small code refactor to increase future Python 3 compatibility.
+  [hvelarde]
+
+
+1.7b2 (2018-04-27)
+^^^^^^^^^^^^^^^^^^
+
+- Fix multiple CSS class selection in tile configuration for tiles different from basic tile.
+  [rodfersou]
+
+
+1.7b1 (2018-04-27)
+^^^^^^^^^^^^^^^^^^
+
+- Update i18n, Brazilian Portuguese and Spanish translations.
+  [hvelarde]
+
+- Allow selection of multiple CSS classes in tile configuration.
+  [rodfersou]
+
+- Small code refactor to increase future Python 3 compatibility;
+  add dependency on `six <https://pypi.python.org/pypi/six>`_.
+  [hvelarde]
+
+- Provide alternative text for image fields in tiles (closes `#628 <https://github.com/collective/collective.cover/issues/628>`_).
+  [hvelarde]
+
+
+1.6b5 (2017-11-21)
+^^^^^^^^^^^^^^^^^^
+
+- Fix purging of tile annotations when removing tiles from the cover layout.
+  This solves exponential growth of cover objects when using versioning,
+  leading to check in/check out (plone.app.iterate) timeouts on backends using proxy servers (fixes `#765 <https://github.com/collective/collective.cover/issues/765>`_).
+  [rodfersou]
+
+- Do not auto include package dependencies, but declare them explicitly.
+  [hvelarde]
+
+
+1.6b4 (2017-10-30)
+^^^^^^^^^^^^^^^^^^
+
+- Revert declaring ``cover_layout`` field in content type schema as ``readonly`` (fixes `#761 <https://github.com/collective/collective.cover/issues/761>`_).
+  [hvelarde]
+
+
+1.6b3 (2017-10-23)
+^^^^^^^^^^^^^^^^^^
+
+- Fix edit view of carousel tile when one carousel item has a unicode character in its title (fixes `#757 <https://github.com/collective/collective.cover/issues/757>`_).
+  [fulv]
+
+- Explicitly declare ``cover_layout`` field in content type schema as ``readonly``;
+  Robot Framework tests pass again with latest version of Plone 4.3 (fixes `#759 <https://github.com/collective/collective.cover/issues/759>`_).
+  [hvelarde]
+
+
+1.6b2 (2017-09-01)
+^^^^^^^^^^^^^^^^^^
+
+- Use correct ``image/x-icon`` MIME type for ICO file format (fixes `#750 <https://github.com/collective/collective.cover/issues/750>`_).
+  [hvelarde]
+
+- Fix IDatetimeWidget tile override if using plone.app.contenttypes >= 1.1.1:
+  collective.z3cform.datetimewidget is merged into plone.formwidget.datetime,
+  so the zcml must override the template from plone.formwidget.datetime.z3cform.interfaces.IDatetimeWidget
+  as well. (closes `#745`_).
+  [idgserpro]
 
 - Review tile refresh using custom event.
   [rodfersou]
@@ -235,3 +382,4 @@ Previous entries can be found in the HISTORY.rst file.
 .. _`#713`: https://github.com/collective/collective.cover/issues/713
 .. _`#721`: https://github.com/collective/collective.cover/issues/721
 .. _`#727`: https://github.com/collective/collective.cover/issues/727
+.. _`#745`: https://github.com/collective/collective.cover/issues/745

@@ -29,8 +29,29 @@ class IBasicTile(IPersistentCoverTile):
         required=False,
     )
 
+    form.omitted(IDefaultConfigureForm, 'remote_url')
+    remote_url = schema.URI(
+        title=_(u'label_remote_url', default=u'URL'),
+        description=_(
+            u'help_remote_url',
+            default=u'Leave this field empty to use the URL of the referenced content. '
+                    u'Enter a URL to override it (use absolute links only).'),
+        required=False,
+    )
+
     image = NamedImage(
         title=_(u'Image'),
+        required=False,
+    )
+
+    form.omitted(IDefaultConfigureForm, 'alt_text')
+    alt_text = schema.TextLine(
+        title=_(
+            u'label_alt_text',
+            default=u'Alternative Text'),
+        description=_(
+            u'help_alt_text',
+            default=u'Provides a textual alternative to non-text content in web pages.'),  # noqa E501
         required=False,
     )
 
@@ -63,7 +84,6 @@ class IBasicTile(IPersistentCoverTile):
 class BasicTile(PersistentCoverTile):
 
     index = ViewPageTemplateFile('templates/basic.pt')
-
     is_configurable = True
     short_name = _(u'msg_short_name_basic', default=u'Basic')
 
@@ -71,7 +91,7 @@ class BasicTile(PersistentCoverTile):
     def brain(self):
         uuid = self.data.get('uuid')
         results = api.content.find(UID=uuid)
-        assert len(results) <= 1
+        assert len(results) <= 1  # nosec
         return results[0] if results else None
 
     def Date(self):
@@ -98,8 +118,13 @@ class BasicTile(PersistentCoverTile):
         return not [i for i in self.data.values() if i]
 
     def getURL(self):
-        """ Return the URL of the original object.
+        """Return the URL of the referenced object or the value stored
+        in remote_url field.
         """
+        remote_url = self.data.get('remote_url')
+        if remote_url:
+            return remote_url
+
         if self.brain:
             return self.brain.getURL()
 
@@ -113,22 +138,28 @@ class BasicTile(PersistentCoverTile):
     def populate_with_object(self, obj):
         super(BasicTile, self).populate_with_object(obj)
 
+        title = safe_unicode(obj.Title())
+        description = safe_unicode(obj.Description())
+
+        image = self.get_image_data(obj)
+        if image:
+            # clear scales if new image is getting saved
+            self.clear_scales()
+
         # initialize the tile with all fields needed for its rendering
         # note that we include here 'date' and 'subjects', but we do not
         # really care about their value: they came directly from the catalog
         # brain
         data = {
-            'title': safe_unicode(obj.Title()),
-            'description': safe_unicode(obj.Description()),
+            'title': title,
+            'description': description,
             'uuid': IUUID(obj),
             'date': True,
             'subjects': True,
-            'image': self.get_image_data(obj)
+            'image': image,
+            # FIXME: https://github.com/collective/collective.cover/issues/778
+            'alt_text': description or title,
         }
-
-        if data['image']:
-            # clear scales if new image is getting saved
-            self.clear_scales()
 
         data_mgr = ITileDataManager(self)
         data_mgr.set(data)
@@ -138,8 +169,9 @@ class BasicTile(PersistentCoverTile):
 
     @property
     def alt(self):
-        """Return the alt attribute for the image."""
-        return self.data.get('description') or self.data.get('title')
+        """Return alternative text dealing with form init issues."""
+        alt_text = self.data['alt_text']
+        return alt_text if alt_text is not None else u''
 
 
 @implementer(ISearchableText)

@@ -7,6 +7,7 @@ from mock import Mock
 from plone import api
 from plone.uuid.interfaces import IUUID
 
+import six
 import unittest
 
 
@@ -48,7 +49,7 @@ class CollectionTileTestCase(TestTileMixin, unittest.TestCase):
     def test_tile_is_empty(self):
         self.assertTrue(self.tile.is_empty())
 
-    def test_populate_tile_with_object_unicode(self):
+    def test_populate_tile_with_object_text(self):
         """We must store unicode always on schema.TextLine and schema.Text
         fields to avoid UnicodeDecodeError.
         """
@@ -60,8 +61,8 @@ class CollectionTileTestCase(TestTileMixin, unittest.TestCase):
         self.assertEqual(self.tile.data.get('header'), title)
         self.assertTrue(self.tile.data.get('footer'))
         self.assertEqual(self.tile.data.get('uuid'), IUUID(obj))
-        self.assertIsInstance(self.tile.data.get('header'), unicode)
-        self.assertIsInstance(self.tile.data.get('footer'), unicode)
+        self.assertIsInstance(self.tile.data.get('header'), six.text_type)
+        self.assertIsInstance(self.tile.data.get('footer'), six.text_type)
 
     def test_populate_tile_with_object_string(self):
         """This test complements test_populate_with_object_unicode
@@ -72,7 +73,8 @@ class CollectionTileTestCase(TestTileMixin, unittest.TestCase):
         obj.setTitle(title)
         obj.reindexObject()
         self.tile.populate_with_object(obj)
-        self.assertEqual(unicode(title, 'utf-8'), self.tile.data.get('header'))
+        self.assertEqual(
+            six.text_type(title, 'utf-8'), self.tile.data.get('header'))
         self.assertTrue(self.tile.data.get('footer'))
         self.assertEqual(self.tile.data.get('uuid'), IUUID(obj))
 
@@ -119,7 +121,7 @@ class CollectionTileTestCase(TestTileMixin, unittest.TestCase):
         tile_conf = self.tile.get_tile_configuration()
         tile_conf['image']['visibility'] = u'off'
         self.tile.set_tile_configuration(tile_conf)
-        assert not self.tile._field_is_visible('image')
+        self.assertFalse(self.tile._field_is_visible('image'))
         obj = self.portal['my-image']
         self.assertIsNone(self.tile.thumbnail(obj))
 
@@ -130,7 +132,7 @@ class CollectionTileTestCase(TestTileMixin, unittest.TestCase):
         self.tile.set_tile_configuration(tile_conf)
         obj = self.portal['my-image']
         self.assertTrue(self.tile.thumbnail(obj))
-        self.assertIsInstance(self.tile(), unicode)
+        self.assertIsInstance(self.tile(), six.text_type)
 
     def test_number_of_items(self):
         obj = self.portal['mandelbrot-set']
@@ -183,7 +185,7 @@ class CollectionTileTestCase(TestTileMixin, unittest.TestCase):
 
         # now, return results in random order
         self.tile.data['random'] = True
-        for i in range(0, 10):
+        for _ in range(0, 10):
             results = [o for o in self.tile.results()]
             if results != ordered:
                 return
@@ -195,7 +197,7 @@ class CollectionTileTestCase(TestTileMixin, unittest.TestCase):
             obj = api.content.create(
                 self.portal, 'Collection', 'collection', query=EVENTS)
             api.content.transition(obj, 'publish')
-            assert len(obj.results()) == 1
+            assert len(obj.results()) == 1  # nosec
         return obj
 
     def test_show_start_date_on_events(self):
@@ -221,10 +223,7 @@ class CollectionTileTestCase(TestTileMixin, unittest.TestCase):
         fmt_date = self.portal.toLocalizedTime(date, True)
 
         rendered = self.tile()
-        self.assertTrue(
-            fmt_date in rendered,
-            'Formatted date should be in rendered tile'
-        )
+        self.assertIn(fmt_date, rendered)
 
     def test_localized_time_is_rendered(self):
         obj = self._create_events_collection()

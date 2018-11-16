@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-
 from collective.cover.testing import INTEGRATION_TESTING
 from collective.cover.widgets.textlinessortable import TextLinesSortableWidget
 
+import six
 import unittest
 
 
@@ -24,7 +24,7 @@ class TestTextLinesSortableWidget(unittest.TestCase):
             obj1.UID(): {u'order': u'0'},
             obj2.UID(): {u'order': u'2'},
             obj3.UID(): {u'order': u'1'},
-        }
+        },
         }
 
         expected = [
@@ -59,21 +59,15 @@ class TestTextLinesSortableWidget(unittest.TestCase):
             obj1.UID(): {u'order': u'0', u'custom_title': u'custom_title'},
             obj2.UID(): {u'order': u'1', u'custom_title': u''},
             obj3.UID(): {u'order': u'2'},
-        }
+        },
         }
 
         self.assertEqual(
-            widget.get_custom_title(obj1.UID()),
-            u'custom_title'
-        )
+            widget.get_custom_title(obj1.UID()), u'custom_title')
         self.assertEqual(
-            widget.get_custom_title(obj2.UID()),
-            u'Test image #1'
-        )
+            widget.get_custom_title(obj2.UID()), u'Test image #1')
         self.assertEqual(
-            widget.get_custom_title(obj3.UID()),
-            u'Test image #2'
-        )
+            widget.get_custom_title(obj3.UID()), u'Test image #2')
 
     def test_get_custom_description(self):
         widget = TextLinesSortableWidget(self.request)
@@ -86,20 +80,20 @@ class TestTextLinesSortableWidget(unittest.TestCase):
             obj1.UID(): {u'order': u'0', u'custom_description': u'custom_description'},
             obj2.UID(): {u'order': u'1', u'custom_description': u''},
             obj3.UID(): {u'order': u'2'},
-        }
+        },
         }
 
         self.assertEqual(
             widget.get_custom_description(obj1.UID()),
-            u'custom_description'
+            u'custom_description',
         )
         self.assertEqual(
             widget.get_custom_description(obj2.UID()),
-            u'This image #1 was created for testing purposes'
+            u'This image #1 was created for testing purposes',
         )
         self.assertEqual(
             widget.get_custom_description(obj3.UID()),
-            u'This image #2 was created for testing purposes'
+            u'This image #2 was created for testing purposes',
         )
 
     def test_get_custom_url(self):
@@ -113,7 +107,7 @@ class TestTextLinesSortableWidget(unittest.TestCase):
             obj1.UID(): {u'order': u'0', u'custom_url': u'custom_url'},
             obj2.UID(): {u'order': u'1', u'custom_url': u''},
             obj3.UID(): {u'order': u'2'},
-        }
+        },
         }
 
         self.assertEqual(widget.get_custom_url(obj1.UID()), u'custom_url')
@@ -127,7 +121,7 @@ class TestTextLinesSortableWidget(unittest.TestCase):
         uuids = [
             obj1.UID(),
             obj3.UID(),
-            obj2.UID()
+            obj2.UID(),
         ]
 
         name = 'uuid.field'
@@ -141,10 +135,10 @@ class TestTextLinesSortableWidget(unittest.TestCase):
         expected = {
             obj1.UID(): {
                 u'custom_url': u'custom_url',
-                u'order': u'0'
+                u'order': u'0',
             },
             obj2.UID(): {u'order': u'2'},
-            obj3.UID(): {u'order': u'1'}
+            obj3.UID(): {u'order': u'1'},
         }
 
         extracted_value = widget.extract()
@@ -158,20 +152,51 @@ class TestTextLinesSortableWidget(unittest.TestCase):
         self.assertDictEqual(extracted_value, expected)
 
     def test_utf8_custom_data(self):
-        obj = self.portal['my-image']
-        obj.setDescription('áéíóú')
+        obj1 = self.portal['my-image']
+        obj1.setDescription('áéíóú')
+        obj2 = self.portal['my-image2']
+        obj2.setTitle('áéíóú')
+        obj2.setDescription('áéíóú')
+        uuids = [
+            obj1.UID(),
+            obj2.UID(),
+        ]
 
         name = 'uuid.field'
-        self.request.set(name, u'{0}'.format(obj.UID()))
-        self.request.set(u'{0}.custom_description.{1}'.format(name, obj.UID()), u'áéíóú')
+        self.request.set(name, u'\r\n'.join(uuids))
+        self.request.set(u'{0}.custom_description.{1}'.format(name, obj1.UID()), u'áéíóú')
+        self.request.set(u'{0}.custom_description.{1}'.format(name, obj2.UID()), u'')
 
         widget = TextLinesSortableWidget(self.request)
         widget.name = name
+        widget.context = {'uuids': {
+            obj1.UID(): {u'order': u'0', u'custom_description': u'áéíóú'},
+            obj2.UID(): {u'order': u'1', u'custom_description': u''},
+        },
+        }
 
         expected = {
-            obj.UID(): {u'order': u'0'},
+            obj1.UID(): {u'order': u'0'},
+            obj2.UID(): {u'order': u'1'},
         }
 
         extracted_value = widget.extract()
 
         self.assertDictEqual(extracted_value, expected)
+
+        self.assertEqual(
+            widget.get_custom_title(obj1.UID()), u'Test image')
+        self.assertEqual(
+            widget.get_custom_description(obj1.UID()), u'áéíóú')
+        self.assertIsInstance(
+            widget.get_custom_title(obj1.UID()), six.text_type)
+        self.assertIsInstance(
+            widget.get_custom_description(obj1.UID()), six.text_type)
+        self.assertEqual(
+            widget.get_custom_title(obj2.UID()), u'áéíóú')
+        self.assertEqual(
+            widget.get_custom_description(obj2.UID()), u'áéíóú')
+        self.assertIsInstance(
+            widget.get_custom_title(obj2.UID()), six.text_type)
+        self.assertIsInstance(
+            widget.get_custom_description(obj2.UID()), six.text_type)

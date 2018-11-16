@@ -8,6 +8,7 @@ from plone.tiles.interfaces import ITileDataManager
 from plone.uuid.interfaces import IUUID
 from Products.Five.browser import BrowserView
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
+from six import iteritems
 from zExceptions import BadRequest
 from zope.event import notify
 from zope.interface import implementer
@@ -44,7 +45,7 @@ class UpdateTileContent(BrowserView):
 
         catalog = api.portal.get_tool('portal_catalog')
         results = catalog(UID=self.uuid)
-        assert len(results) in (0, 1)
+        assert len(results) in (0, 1)  # nosec
         if results:
             obj = results[0].getObject()
             path = '{0}/{1}'.format(self.tile_type, self.tile_id)
@@ -90,7 +91,7 @@ class MoveTileContent(BrowserView):
             origin_data = origin_dmgr.get()
             target_dmgr = ITileDataManager(target_tile)
             target_data = target_dmgr.get()
-            for k, v in origin_data.iteritems():
+            for k, v in iteritems(origin_data):
                 if k in target_data and not k.startswith('uuid') and v is not None:
                     target_data[k] = v
             target_dmgr.set(target_data)
@@ -168,25 +169,6 @@ class RemoveItemFromListTile(BrowserView):
         if IListTile.providedBy(tile):
             tile.remove_item(self.uuid)
             return tile()
-
-    def __call__(self):
-        self.setup()
-        return self.render()
-
-
-class DeleteTile(BrowserView):
-
-    """Helper browser view to remove a tile."""
-
-    def setup(self):
-        self.tile_type = self.request.form.get('tile-type')
-        self.tile_id = self.request.form.get('tile-id')
-
-    def render(self):
-        if self.tile_type and self.tile_id:
-            path = '{0}/{1}'.format(self.tile_type, self.tile_id)
-            tile = self.context.restrictedTraverse(path)
-            tile.delete()
 
     def __call__(self):
         self.setup()

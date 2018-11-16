@@ -18,6 +18,10 @@ contents, built around a drag-and-drop interface.
 like `Mosaic <https://pypi.python.org/pypi/plone.app.mosaic>`_,
 the new layout solution for Plone.
 
+.. note::
+    Starting from version 2.0b1 this package is compatible with Plone 5.1;
+    nevertheless, there are some `known issues <https://github.com/collective/collective.cover/issues?q=is%3Aissue+is%3Aopen+label%3A%22plone+5%22>`_.
+
 Demo
 ^^^^
 
@@ -85,10 +89,12 @@ Got an idea? Found a bug? Let us know by `opening a support ticket <https://gith
 Known issues
 ^^^^^^^^^^^^
 
+* `URI validation happens outside modal window <https://github.com/collective/collective.cover/issues/838>`_.
+  This is an issue present on Banner and Basic tiles.
 * `Package is not compatible with standard Plone tiles <https://github.com/collective/collective.cover/issues/81>`_.
   This will be addressed in a future release, if we get an sponsor.
 
-See the `complete list of bugs on GitHub <hhttps://github.com/collective/collective.cover/labels/bug>`_.
+See the `complete list of bugs on GitHub <https://github.com/collective/collective.cover/labels/bug>`_.
 
 Don't Panic
 -----------
@@ -104,7 +110,7 @@ Installation
 
 To enable this package in a buildout-based installation:
 
-Edit your buildout.cfg and add add the following to it:
+Edit your buildout.cfg and add the following to it:
 
 .. code-block:: ini
 
@@ -116,9 +122,18 @@ Edit your buildout.cfg and add add the following to it:
     [versions]
     ...
     collective.js.bootstrap = 2.3.1.1
-    plone.app.blocks = 4.0.6
-    plone.app.tiles = 3.0.3
-    plone.tiles = 2.0.0b2
+    plone.app.blocks = 4.2.0
+    plone.app.tiles = 3.1.0
+    plone.tiles = 2.1
+
+If you want to use the relation field you must use the ``[relations]`` extra in your buildout configuration.
+
+.. code-block:: ini
+
+    [buildout]
+    ...
+    eggs =
+        collective.cover [relations]
 
 If you want to use a newer release of ``collective.js.bootstrap``, you will need to update ``plone.app.jquery``:
 
@@ -134,9 +149,20 @@ Go to the 'Site Setup' page in a Plone site and click on the 'Add-ons' link.
 
 Check the box next to ``collective.cover`` and click the 'Activate' button.
 
-.. Note::
+.. note::
     You may have to empty your browser cache and save your resource registries
     in order to see the effects of the product installation.
+
+Upgrading from 1.x to 2.x
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In version 2.0b1 we removed a hard dependency on ``plone.app.relationfield``.
+You must use the ``[relations]`` extra in your buildout configuration as stated above,
+or your site will break with the following error:
+
+.. code-block:: pytb
+
+    AttributeError: type object 'ICatalog' has no attribute '__iro__'
 
 Not entirely unlike
 -------------------

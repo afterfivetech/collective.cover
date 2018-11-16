@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from Acquisition import aq_inner
 from Acquisition import aq_parent
+from collective.cover.config import IS_PLONE_5
 from collective.cover.controlpanel import ICoverSettings
 from plone import api
 from plone.app.layout.navigation.interfaces import INavigationRoot
@@ -34,6 +35,10 @@ class SelectContent(BrowserView):
     def post_url(self):
         return self.context.absolute_url() + '/@@content-search'
 
+    @staticmethod
+    def is_plone_5():
+        return IS_PLONE_5
+
     def __call__(self):
         return self.index()
 
@@ -52,10 +57,7 @@ class ContentSearch(BrowserView):
         strategy = SitemapNavtreeStrategy(self.context)
 
         uuids = None
-        result = self.search(
-            self.query, uuids=uuids,
-            page=page
-        )
+        result = self.search(self.query, uuids=uuids, page=page)
         self.has_next = result.next is not None
         self.nextpage = result.pagenumber + 1
         children = [strategy.decoratorFactory({'item': node}) for node in result]
@@ -206,9 +208,9 @@ class SearchItemsBrowserView(BrowserView):
                 'title': brain.Title == '' and brain.id or brain.Title,
                 'icon': self.getIcon(brain).url or '',
                 'is_folderish': brain.is_folderish,
-                'description': brain.Description or ''
+                'description': brain.Description or '',
             })
-        # add catalog_ressults
+        # add catalog_results
         results['items'] = catalog_results
         # return results in JSON format
         return json.dumps(results)

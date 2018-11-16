@@ -9,7 +9,7 @@ Suite Teardown  Close all browsers
 *** Variables ***
 
 ${basic_tile_name} =  "collective.cover.basic"
-${image_selector}  //div[@id="content-trees"]//li[@class="ui-draggable"]/a[@data-ct-type="Image"]/span[text()='Test image']/..
+${image_selector}  //fieldset[@id="content-trees"]//li[@class="ui-draggable"]/a[@data-ct-type="Image"]/span[text()='Test image']/..
 ${tile_selector}  div.tile-container div.tile
 ${tile_class} =  div.cover-tile
 
@@ -37,7 +37,7 @@ Test Scaling
     Open Layout Tab
     Click Config from Tile  ${tile_class}
     Wait until element is visible  id=buttons-cancel
-    Select From List  css=#collective-cover-basic-image-imgsize  listing 16:16
+    Select From List  css=#collective-cover-basic-image-imgsize  listing 16x16
     Click Button  id=buttons-save
     Save Cover Layout
 
@@ -47,7 +47,7 @@ Test Scaling
     Open Layout Tab
     Click Config from Tile  ${tile_class}
     Wait until element is visible  id=buttons-cancel
-    Select From List  css=#collective-cover-basic-image-imgsize  icon 32:32
+    Select From List  css=#collective-cover-basic-image-imgsize  icon 32x32
     Click Button  id=buttons-save
     Save Cover Layout
 

@@ -33,7 +33,17 @@ class LayoutEdit(BrowserView):
     def setup(self):
         self.context = aq_inner(self.context)
         vocab = TileStylesVocabulary()
-        self.css_classes = vocab(self.context)
+        items = [
+            {
+                'content': item.title,
+                'value': item.value,
+                'selected': False,
+            }
+            for item in vocab(self.context)
+            if item.value != 'tile-default'
+        ]
+        self.css_classes = json.dumps(items)
+
         # lock the object when someone is editing it
         notify(EditBegunEvent(self.context))
 
@@ -240,6 +250,7 @@ class LayoutSave(BrowserView):
         self.cover_layout = json.dumps(layout)
 
         self.context.cover_layout = self.cover_layout
+        self.context.purge_deleted_tiles()
         self.context.reindexObject()
 
         return 'saved'
@@ -269,7 +280,7 @@ class TileList(BrowserView):
             'icon': tile_type.icon,
             'description': tile_type.description,
             'title': title,
-            'is_configurable': tile.is_configurable and 1 or 0
+            'is_configurable': tile.is_configurable and 1 or 0,
         }
 
         return tile_metadata

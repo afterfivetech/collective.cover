@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from collective.cover.behaviors.interfaces import IRefresh
+from collective.cover.config import ANNOTATION_PREFIXES
 from collective.cover.config import PROJECTNAME
 from collective.cover.interfaces import ICover
 from collective.cover.interfaces import ISearchableText
@@ -12,6 +13,7 @@ from plone.dexterity.content import Item
 from plone.indexer import indexer
 from plone.tiles.interfaces import ITileDataManager
 from Products.CMFPlone.utils import safe_unicode
+from zope.annotation import IAnnotations
 from zope.component import queryAdapter
 
 import json
@@ -60,7 +62,7 @@ class Cover(Item):
                 layout = []
         else:
             # we are recursively processing the layout
-            assert isinstance(layout, list)
+            assert isinstance(layout, list)  # nosec
 
         tiles = []
         for e in layout:
@@ -92,32 +94,32 @@ class Cover(Item):
         :raises ValueError: if the tile does not exists
         """
         tile = [t for t in self.get_tiles() if t['id'] == id]
-        assert len(tile) in (0, 1)
+        assert len(tile) in (0, 1)  # nosec
         if len(tile) == 0:
             raise ValueError
         return tile[0]['type']
 
-    def get_tile(self, id):
+    def get_tile(self, tile_id):
         """Get the tile defined by id.
 
-        :param id: id of the tile we want to get
-        :type id: string
+        :param tile_id: tile_id of the tile we want to get
+        :type tile_id: string
         :returns: a tile
         :rtype: PersistentTile instance
         """
-        type = str(self.get_tile_type(id))
-        id = str(id)
-        return self.restrictedTraverse('{0}/{1}'.format(type, id))
+        tile_type = str(self.get_tile_type(tile_id))
+        tile_id = str(tile_id)
+        return self.restrictedTraverse('{0}/{1}'.format(tile_type, tile_id))
 
-    def set_tile_data(self, id, **data):
+    def set_tile_data(self, tile_id, **data):
         """Set data attributes on the tile defined by id.
 
-        :param id: id of the tile we want to modify its data
-        :type id: string
+        :param tile_id: tile_id of the tile we want to modify its data
+        :type tile_id: string
         :param data: a dictionary of attributes we want to set on the tile
         :type data: dictionary
         """
-        tile = self.get_tile(id)
+        tile = self.get_tile(tile_id)
         data_mgr = ITileDataManager(tile)
         data_mgr.set(data)
 
@@ -147,6 +149,26 @@ class Cover(Item):
                 links = extractLinks(value)
                 refs |= getObjectsFromLinks(self, links)
         return refs
+
+    def purge_deleted_tiles(self):
+        """Purge annotations of tiles that are no longer referenced on
+        the layout.
+        """
+        layout_tiles = self.list_tiles()
+        annotations = IAnnotations(self)
+
+        for key in annotations:
+            if not key.startswith(ANNOTATION_PREFIXES):
+                continue
+
+            # XXX: we need to remove tile annotations at low level as
+            #      there's no information available on the tile type
+            #      (it's no longer in the layout and we can only infer
+            #      its id); this could lead to issues in the future if
+            #      a different storage is used (see plone.tiles code)
+            tile_id = key.split('.')[-1]
+            if tile_id not in layout_tiles:
+                del annotations[key]
 
 
 @indexer(ICover)

@@ -2,7 +2,6 @@
 from AccessControl import Unauthorized
 from collective.cover import _
 from collective.cover.config import PROJECTNAME
-from collective.cover.interfaces import ICoverUIDsProvider
 from collective.cover.interfaces import ITileEditForm
 from collective.cover.tiles.base import IPersistentCoverTile
 from collective.cover.tiles.base import PersistentCoverTile
@@ -22,7 +21,7 @@ from zope.interface import implementer
 from zope.schema import getFieldsInOrder
 
 import logging
-import warnings
+import six
 
 
 logger = logging.getLogger(PROJECTNAME)
@@ -132,9 +131,7 @@ class ListTile(PersistentCoverTile):
                         # the object was deleted; remove it from the tile
                         self.remove_item(uuid)
                         logger.debug(
-                            'Nonexistent object {0} removed from '
-                            'tile'.format(uuid)
-                        )
+                            'Non-existent object {0} removed from tile'.format(uuid))  # noqa: E501
 
         return results[:self.limit]
 
@@ -153,7 +150,7 @@ class ListTile(PersistentCoverTile):
         #      like the Carousel tile
         catalog = api.portal.get_tool('portal_catalog')
         brain = catalog(UID=self.get_uuid(obj))
-        assert len(brain) == 1
+        assert len(brain) == 1  # nosec
         return super(ListTile, self).Date(brain[0])
 
     # TODO: get rid of this by replacing it with the 'count' field
@@ -209,9 +206,9 @@ class ListTile(PersistentCoverTile):
             order = order_list.pop() + 1
 
         for uuid in uuids:
-            if uuid not in uuids_dict.keys():
+            if uuid not in uuids_dict:
                 entry = dict()
-                entry[u'order'] = unicode(order)
+                entry[u'order'] = six.text_type(order)
                 uuids_dict[uuid] = entry
                 order += 1
 
@@ -348,7 +345,7 @@ class ListTile(PersistentCoverTile):
 
         return {
             'href': brainz[0].getURL(),
-            'text': self.data['more_link_text']
+            'text': self.data['more_link_text'],
         }
 
     @view.memoize
@@ -374,42 +371,3 @@ class ListTile(PersistentCoverTile):
     @view.memoize
     def get_title_tag(self, item):
         return self._get_title_tag(item)
-
-
-@implementer(ICoverUIDsProvider)
-class CollectionUIDsProvider(object):
-    """CollectionUIDsProvider adapter will be removed in collective.cover v1.7."""
-    warnings.warn(__doc__, DeprecationWarning)
-
-    def __init__(self, context):
-        self.context = context
-
-    def getUIDs(self):
-        """Return a list of UUIDs of collection objects."""
-        return [i.UID for i in self.context.queryCatalog()]
-
-
-@implementer(ICoverUIDsProvider)
-class FolderUIDsProvider(object):
-    """FolderUIDsProvider adapter will be removed in collective.cover v1.7."""
-    warnings.warn(__doc__, DeprecationWarning)
-
-    def __init__(self, context):
-        self.context = context
-
-    def getUIDs(self):
-        """Return a list of UUIDs of collection objects."""
-        return [i.UID for i in self.context.getFolderContents()]
-
-
-@implementer(ICoverUIDsProvider)
-class GenericUIDsProvider(object):
-    """GenericUIDsProvider adapter will be removed in collective.cover v1.7."""
-    warnings.warn(__doc__, DeprecationWarning)
-
-    def __init__(self, context):
-        self.context = context
-
-    def getUIDs(self):
-        """Return a list of UUIDs of collection objects."""
-        return [IUUID(self.context)]

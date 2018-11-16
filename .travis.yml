@@ -3,6 +3,7 @@ python: 2.7
 sudo: false
 cache:
   directories:
+  - $HOME/.pylint.d
   - eggs
   - parts/node
 addons:
@@ -18,10 +19,12 @@ env:
     - PLONE_VERSION=4.3
     - PLONE_VERSION=4.3 DEXTERITY_ONLY=true
     - PLONE_VERSION=4.3 VERSIONS=versions:plone.app.jquery=1.9.2
-    - PLONE_VERSION=5.0
     - PLONE_VERSION=5.1
 matrix:
   fast_finish: true
+before_install:
+# FIXME: I have no idea how and why six==1.11.0 is being installed
+- pip uninstall -y six
 install:
 - sed -ie "s#test-4.3#test-$PLONE_VERSION#" buildout.cfg
 - sed -ie "s#versions-4.3#versions-$PLONE_VERSION#" buildout.cfg
@@ -29,21 +32,24 @@ install:
 - bin/buildout $VERSIONS annotate
 - bin/buildout $VERSIONS
 before_script:
+  - export ROBOT_SELENIUM2LIBRARY_RUN_ON_FAILURE="Capture Page Screenshot"
   - export DISPLAY=:99.0
   - sh -e /etc/init.d/xvfb start
   - firefox -v
 script:
 - bin/code-analysis
 - bin/test
+- bin/pylint --py3k --disable=no-absolute-import src/collective/cover || true
 after_success:
-- bin/createcoverage -t "--layer=!Robot"
+- pip install coverage
+- coverage run bin/test --layer=\!Robot
+# Coveralls
 - pip install coveralls
 - coveralls
-after_script:
-# Firefox complains: GConf-WARNING **: Got Disconnected from DBus.
-# And then it keeps hanging, causing a failed job after 30-50 minutes.
-# So we just kill Firefox.
-- pkill -9 firefox
+# Codacy
+- coverage xml
+- pip install codacy-coverage
+- python-codacy-coverage -r coverage.xml
 notifications:
   irc:
     on_success: change
@@ -55,5 +61,4 @@ notifications:
       - "Robot Test Report for Plone 4.3: http://s3-sa-east-1.amazonaws.com/collective-cover/collective/collective.cover/%{build_number}/%{build_number}.1/parts/test/robot_log.html"
       - "Robot Test Report for plone.app.contenttypes: http://s3-sa-east-1.amazonaws.com/collective-cover/collective/collective.cover/%{build_number}/%{build_number}.2/parts/test/robot_log.html"
       - "Robot Test Report for jQuery 1.9: http://s3-sa-east-1.amazonaws.com/collective-cover/collective/collective.cover/%{build_number}/%{build_number}.3/parts/test/robot_log.html"
-      - "Robot Test Report for Plone 5.0: http://s3-sa-east-1.amazonaws.com/collective-cover/collective/collective.cover/%{build_number}/%{build_number}.4/parts/test/robot_log.html"
       - "Robot Test Report for Plone 5.1: http://s3-sa-east-1.amazonaws.com/collective-cover/collective/collective.cover/%{build_number}/%{build_number}.5/parts/test/robot_log.html"

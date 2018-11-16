@@ -1,4 +1,115 @@
 (function($) {
+  var CSSClassWidget = (function() {
+    function CSSClassWidget($el, callback) {
+      this.$el = $el;
+      this.callback = callback;
+      this.$value = $el.next();
+      this.open = false;
+
+      var i, item, len;
+      this.order = [];
+      this.options = {};
+      options = JSON.parse($el.attr('data-options'));
+      for (i = 0, len = options.length; i < len; i++) {
+        item = options[i];
+        this.order.push(item.value);
+        this.options[item.value] = item;
+      }
+      this.setSelected(this.$value.val());
+      this.update();
+      this.$el.on('click', this.onButtonClick.bind(this))
+    }
+    CSSClassWidget.prototype.update = function() {
+      var i, key, item, len;
+      value = '';
+      for (i = 0, len = this.order.length; i < len; i++) {
+        key = this.order[i];
+        item = this.options[key];
+        if (item.selected) {
+          value += ' ' + key;
+        }
+      }
+      value = value.trim();
+      if (value === '') {
+        value = 'tile-default';
+      }
+      this.$value.val(value);
+      if (this.callback instanceof Function) {
+        this.callback(value);
+      }
+    }
+    CSSClassWidget.prototype.setSelected = function(selected) {
+      if (selected == null || selected === '') {
+        selected = [];
+      } else {
+        selected = selected.split(' ');
+      }
+      var i, key, len;
+      for (i = 0, len = selected.length; i < len; i++) {
+        key = selected[i];
+        if (key === 'tile-default') {
+          continue;
+        }
+        if (this.options[key] == null) {
+          continue;
+        }
+        this.options[key].selected = true;
+      }
+      this.update();
+    };
+    CSSClassWidget.prototype.onButtonClick = function(e) {
+      e.preventDefault();
+
+      $('.cssclasswidget-overlay').remove();
+      $('.cssclasswidget-classlist').remove();
+
+      this.open = !this.open;
+      if (!this.open) {
+        return;
+      }
+
+      var $overlay = $('<div class="cssclasswidget-overlay">');
+      $overlay.insertAfter(this.$el);
+      $overlay.on('click', this.onOverlayClick.bind(this));
+
+      var $classlist = $('<ul class="cssclasswidget-classlist">');
+      var i, key, item, $item, len;
+      value = '';
+      for (i = 0, len = this.order.length; i < len; i++) {
+        key = this.order[i];
+        item = this.options[key];
+        $item = $('<li><input name="'+key+'" type="checkbox" value="'+key+'" /><span class="cssclasswidget-'+key+'">'+item.content+'</span></li>');
+        if (item.selected) {
+          $('input', $item).attr('checked', 'checked');
+        }
+        $classlist.append($item);
+      }
+      $classlist.insertAfter(this.$el);
+      $classlist.offset(this.$el.offset());
+      $classlist.css('transform', 'translateY('+(this.$el.height()+4)+'px)');
+      $('span', $classlist).on('click', this.onItemClick.bind(this));
+    };
+    CSSClassWidget.prototype.onOverlayClick = function(e) {
+      e.preventDefault();
+      this.open = false;
+      $('.cssclasswidget-overlay').remove();
+      $('.cssclasswidget-classlist').remove();
+    };
+    CSSClassWidget.prototype.onItemClick = function(e) {
+      e.preventDefault();
+      var $checkbox = $(e.target).prev()
+      var key = $checkbox.attr('name');
+      if ($checkbox.is(':checked')) {
+        $checkbox.removeAttr('checked');
+      } else {
+        $checkbox.attr('checked', 'checked')
+      }
+      this.options[key].selected = $checkbox.is(':checked');
+      this.update();
+    };
+    return CSSClassWidget;
+  })();
+
   /**
    * @constructor
    * @param jqDomObj layout, the layout container
@@ -290,41 +401,10 @@
           'top': '0',
           'width': '15px'
         });
-        elements = elements !== undefined ? elements : le.find('.' + column_class + ', .' + tile_class + ', .' + row_class);
-
         button.click(function() {
           var element = $(this).parent('div');
-          var tiles_to_delete = [];
-
-          if (element.hasClass('tile')) {
-            tiles_to_delete = element;
-          } else {
-            tiles_to_delete = element.find('.tile');
-          }
-
-          var success = true;
-          //XXX are you sure
-          tiles_to_delete.each(function() {
-            var $this = $(this);
-
-            $.ajax({
-              url: 'deletetile',
-              data: {
-                'tile-type': $this.data('tileType'),
-                'tile-id': $(this).attr('id')
-              },
-              success: function(e, v) {
-                $this.remove();
-              },
-              error: function() {
-                success = false;
-              }
-            });
-          });
-          if (success) {
-            element.remove();
-            le.trigger('modified.layout');
-          }
+          element.remove();
+          le.trigger('modified.layout');
         });
         button.hover(
           function() {
@@ -334,6 +414,7 @@
             $(this).parent('div').removeClass('to-delete');
           }
         );
+        elements = elements !== undefined ? elements : le.find('.' + column_class + ', .' + tile_class + ', .' + row_class);
         elements.append(button);
       },
 
@@ -471,23 +552,14 @@
 
         $(document).on('click', '.config-row-link, .config-column-link', function(e) {
           e.preventDefault();
-          $target = $(this).parent();
-          $('#class-chooser').data('target', $target);
-          if ($target.attr('data-css-class')) {
-            $('#class-chooser select').val(
-              $target.attr('data-css-class')
-            );
-          } else {
-            $('#class-chooser select').val('');
-          }
+          var $target = $(this).parent();
+          var $widget = $('#class-chooser > .cssclasswidget');
+          var $value = $('#class-chooser > .cssclasswidget-selected');
+          $value.val($target.attr('data-css-class'));
+          new CSSClassWidget($widget, function(value) {
+            $target.attr('data-css-class', value);
+          });
           $('#class-chooser').dialog("open");
-        });
-
-        $(document).on('change', '#class-chooser select', function(e) {
-          e.preventDefault();
-          $select = $(this);
-          $target = $('#class-chooser').data('target');
-          $target.attr('data-css-class', $select.val());
         });
       },
 
@@ -535,11 +607,12 @@
             success: function(data) {
               $('#tile-configure').html(data);
               // Make sure CSS field is in first place
-              var css_id = 'formfield-collective-cover-basic-css_class';
+              var css_id = $('[id$=css_class]').attr('id');
               var first = $('#configure_tile div.field:first');
               if (first.attr('id') != css_id) {
                 $('#' + css_id).insertBefore(first);
               }
+              new CSSClassWidget($('#' + css_id + ' .cssclasswidget'));
               $('#configure_tile div.field').not('#' + css_id).addClass('config-sortable');
               // Fields in tile config sortable
               $('#configure_tile').sortable({
@@ -669,4 +742,5 @@
       }
     }
   });
+
 })(jQuery);

@@ -3,11 +3,13 @@ from collective.cover.utils import get_types_use_view_action_in_listings
 from collective.cover.utils import uuidToObject
 from collective.cover.widgets.interfaces import ITextLinesSortableWidget
 from Products.CMFPlone.utils import base_hasattr
+from Products.CMFPlone.utils import safe_unicode
 from z3c.form import interfaces
 from z3c.form import widget
 from z3c.form.browser import textlines
 from zope.browserpage.viewpagetemplatefile import ViewPageTemplateFile
 
+import six
 import zope.interface
 
 
@@ -50,12 +52,10 @@ class TextLinesSortableWidget(textlines.TextLinesWidget):
         :type item: Content object
         :returns: The <img> tag for the scale
         """
-        if not item:
-            return None
-        scales = item.restrictedTraverse('@@images')
         try:
+            scales = item.restrictedTraverse('@@images')
             return scales.scale('image', 'tile')
-        except:  # FIXME: B901 blind except: statement
+        except AttributeError:
             return None
 
     def isExpired(self, item):
@@ -80,7 +80,7 @@ class TextLinesSortableWidget(textlines.TextLinesWidget):
             return title
         # If didn't find, get object title
         obj = uuidToObject(uuid)
-        return obj.Title()
+        return safe_unicode(obj.Title())
 
     def get_custom_description(self, uuid):
         """ Returns the custom Description assigned to a specific item
@@ -99,7 +99,7 @@ class TextLinesSortableWidget(textlines.TextLinesWidget):
             return description
         # If didn't find, get object description
         obj = uuidToObject(uuid)
-        return obj.Description()
+        return safe_unicode(obj.Description())
 
     def get_custom_url(self, uuid):
         """ Returns the custom URL assigned to a specific item
@@ -133,30 +133,25 @@ class TextLinesSortableWidget(textlines.TextLinesWidget):
         results = dict()
         for index, uuid in enumerate(uuids):
             obj = uuidToObject(uuid)
-            results[uuid] = {
-                u'order': unicode(index)
-            }
+            results[uuid] = {u'order': six.text_type(index)}
             custom_title = self.request.get(
-                '{0}.custom_title.{1}'.format(self.name, uuid), ''
-            )
+                '{0}.custom_title.{1}'.format(self.name, uuid), '')
             if (custom_title != u'' and
-               custom_title != obj.Title().decode('utf-8')):
-                results[uuid][u'custom_title'] = unicode(custom_title)
+               custom_title != safe_unicode(obj.Title())):
+                results[uuid][u'custom_title'] = six.text_type(custom_title)
             custom_description = self.request.get(
-                '{0}.custom_description.{1}'.format(self.name, uuid), ''
-            )
+                '{0}.custom_description.{1}'.format(self.name, uuid), '')
             if (custom_description != u'' and
-               custom_description != obj.Description().decode('utf-8')):
-                results[uuid][u'custom_description'] = unicode(custom_description)
+               custom_description != safe_unicode(obj.Description())):
+                results[uuid][u'custom_description'] = six.text_type(custom_description)
             custom_url = self.request.get(
-                '{0}.custom_url.{1}'.format(self.name, uuid), ''
-            )
+                '{0}.custom_url.{1}'.format(self.name, uuid), '')
             url = obj.absolute_url()
             if obj.portal_type in get_types_use_view_action_in_listings():
                 url += '/view'
             if (custom_url != u'' and
                custom_url != url):
-                results[uuid][u'custom_url'] = unicode(custom_url)
+                results[uuid][u'custom_url'] = six.text_type(custom_url)
         return results
 
 

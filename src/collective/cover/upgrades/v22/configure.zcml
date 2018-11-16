@@ -5,14 +5,13 @@
     i18n_domain="collective.cover">
 
   <genericsetup:upgradeSteps
-      source="11"
-      destination="12"
+      source="21"
+      destination="22"
       profile="collective.cover:default">
 
     <genericsetup:upgradeStep
-        title="Add Embed Code permission"
-        description="Adds new permission to embed code in the Embed tile."
-        handler=".update_role_map"
+        title="Cook JS resources"
+        handler="..cook_javascript_resources"
         />
 
   </genericsetup:upgradeSteps>
